@@ -2,8 +2,8 @@ use {
     crate::{
         account_storage::AccountStorageMap,
         accounts_db::{
-            AccountShrinkThreshold, AccountStorageEntry, AccountsDbConfig, AtomicAppendVecId,
-            CalcAccountsHashDataSource,
+            AccountShrinkThreshold, AccountStorageEntry, AccountsDbConfig, AppendVecId,
+            AtomicAppendVecId, CalcAccountsHashDataSource,
         },
         accounts_index::AccountSecondaryIndexes,
         accounts_update_notifier_interface::AccountsUpdateNotifier,
@@ -925,8 +925,8 @@ fn get_snapshot_accounts_hardlink_dir(
     // and the symlink to it at the first time of seeing the account_path.
     if !account_paths.contains(&account_path) {
         let idx = account_paths.len();
-        debug!(
-            "for appendvec_path {}, create hard-link path {}",
+        info!(
+            "xxx for appendvec_path {}, create hard-link path {}",
             appendvec_path.display(),
             snapshot_hardlink_dir.display()
         );
@@ -937,6 +937,21 @@ fn get_snapshot_accounts_hardlink_dir(
                 snapshot_hardlink_dir.clone(),
             )
         })?;
+
+        // extra check to make sure snapshot_hardlink_dir is an empty directory
+        let mut entries = fs::read_dir(&snapshot_hardlink_dir).map_err(|e| {
+            SnapshotError::IoWithSourceAndFile(
+                e,
+                "read hard-link dir",
+                snapshot_hardlink_dir.clone(),
+            )
+        })?;
+        if entries.next().is_some() {
+            error!(
+                "xxx The hard-link directory {} is not empty.",
+                snapshot_hardlink_dir.display()
+            );
+        }
         let symlink_path = hardlinks_dir.as_ref().join(format!("account_path_{idx}"));
         symlink::symlink_dir(&snapshot_hardlink_dir, symlink_path).map_err(|e| {
             SnapshotError::IoWithSourceAndFile(
@@ -963,6 +978,24 @@ fn hard_link_storages_to_snapshot(
     let accounts_hardlinks_dir = bank_snapshot_dir.as_ref().join("accounts_hardlinks");
     fs::create_dir_all(&accounts_hardlinks_dir)?;
 
+    // Check to ensure that there is no duplicated (slot, id) in the snapshot_storages.
+    let mut storage_set: HashSet<(Slot, AppendVecId)> = HashSet::new();
+    for storage in snapshot_storages {
+        if storage_set.contains(&(storage.slot(), storage.append_vec_id())) {
+            error!(
+                "The snapshot storage for slot {} and id {} is duplicated.",
+                storage.slot(),
+                storage.append_vec_id()
+            );
+            //return Err(SnapshotError::DuplicateStorageEntry);
+            error!(
+                "xxx duplicated ({}, {}),  continue anyway",
+                storage.slot(),
+                storage.append_vec_id()
+            );
+        }
+        storage_set.insert((storage.slot(), storage.append_vec_id()));
+    }
     let mut account_paths: HashSet<PathBuf> = HashSet::new();
     for storage in snapshot_storages {
         storage.flush()?;
