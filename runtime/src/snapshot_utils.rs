@@ -1699,6 +1699,68 @@ pub fn bank_from_snapshot_dir(
     Ok((bank, timings))
 }
 
+/// follow the prototype of fn bank_from_latest_snapshot_archives, implement the from_dir case
+pub fn bank_from_latest_snapshot_dir(
+    bank_snapshots_dir: &Path,
+    genesis_config: &GenesisConfig,
+    runtime_config: &RuntimeConfig,
+    account_paths: &Vec<PathBuf>,
+    debug_keys: Option<Arc<HashSet<Pubkey>>>,
+    additional_builtins: Option<&Builtins>,
+    account_secondary_indexes: AccountSecondaryIndexes,
+    limit_load_slot_count_from_snapshot: Option<usize>,
+    shrink_ratio: AccountShrinkThreshold,
+    verify_index: bool,
+    accounts_db_config: Option<AccountsDbConfig>,
+    accounts_update_notifier: Option<AccountsUpdateNotifier>,
+    exit: &Arc<AtomicBool>,
+) -> Result<Bank> {
+    info!("Loading bank from snapshot dir");
+    let bank_snapshot = get_highest_bank_snapshot(bank_snapshots_dir)
+        .ok_or_else(|| SnapshotError::NoSnapshotSlotDir(bank_snapshots_dir.to_path_buf()))?;
+
+    let (bank, timings) = bank_from_snapshot_dir(
+        &account_paths,
+        &bank_snapshot,
+        genesis_config,
+        runtime_config,
+        debug_keys,
+        additional_builtins,
+        account_secondary_indexes,
+        limit_load_slot_count_from_snapshot,
+        shrink_ratio,
+        verify_index,
+        accounts_db_config,
+        accounts_update_notifier,
+        exit,
+    )?;
+
+    datapoint_info!(
+        "bank_from_snapshot_archives",
+        (
+            "full_snapshot_untar_us",
+            timings.full_snapshot_untar_us,
+            i64
+        ),
+        (
+            "incremental_snapshot_untar_us",
+            timings.incremental_snapshot_untar_us,
+            i64
+        ),
+        (
+            "rebuild_bank_from_snapshots_us",
+            timings.rebuild_bank_from_snapshots_us,
+            i64
+        ),
+        (
+            "verify_snapshot_bank_us",
+            timings.verify_snapshot_bank_us,
+            i64
+        ),
+    );
+    Ok(bank)
+}
+
 /// Check to make sure the deserialized bank's slot and hash matches the snapshot archive's slot
 /// and hash
 fn verify_bank_against_expected_slot_hash(

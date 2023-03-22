@@ -15,7 +15,7 @@ use {
         snapshot_archive_info::SnapshotArchiveInfoGetter,
         snapshot_config::SnapshotConfig,
         snapshot_hash::{FullSnapshotHash, IncrementalSnapshotHash, StartingSnapshotHashes},
-        snapshot_utils,
+        snapshot_utils::{self, SnapshotFrom},
     },
     solana_sdk::genesis_config::GenesisConfig,
     std::{
@@ -97,22 +97,26 @@ pub fn load_bank_forks(
             "Initializing bank snapshot path: {}",
             snapshot_config.bank_snapshots_dir.display()
         );
-        let _ = fs::remove_dir_all(&snapshot_config.bank_snapshots_dir);
-        fs::create_dir_all(&snapshot_config.bank_snapshots_dir)
-            .expect("Couldn't create snapshot directory");
-
-        if snapshot_utils::get_highest_full_snapshot_archive_info(
-            &snapshot_config.full_snapshot_archives_dir,
-        )
-        .is_some()
-        {
+        if snapshot_config.snapshot_from == SnapshotFrom::Dir {
             true
         } else {
-            warn!(
-                "No snapshot package found in directory: {:?}; will load from genesis",
-                &snapshot_config.full_snapshot_archives_dir
-            );
-            false
+            let _ = fs::remove_dir_all(&snapshot_config.bank_snapshots_dir);
+            fs::create_dir_all(&snapshot_config.bank_snapshots_dir)
+                .expect("Couldn't create snapshot directory");
+
+            if snapshot_utils::get_highest_full_snapshot_archive_info(
+                &snapshot_config.full_snapshot_archives_dir,
+            )
+            .is_some()
+            {
+                true
+            } else {
+                warn!(
+                    "No snapshot package found in directory: {:?}; will load from genesis",
+                    &snapshot_config.full_snapshot_archives_dir
+                );
+                false
+            }
         }
     } else {
         info!("Snapshots disabled; will load from genesis");
@@ -197,6 +201,35 @@ fn bank_forks_from_snapshot(
     if account_paths.is_empty() {
         error!("Account paths not present when booting from snapshot");
         process::exit(1);
+    }
+
+    if snapshot_config.snapshot_from == SnapshotFrom::Dir {
+        match snapshot_utils::bank_from_latest_snapshot_dir(
+            &snapshot_config.bank_snapshots_dir,
+            genesis_config,
+            &process_options.runtime_config,
+            &account_paths,
+            process_options.debug_keys.clone(),
+            Some(&crate::builtins::get(
+                process_options.runtime_config.bpf_jit,
+            )),
+            process_options.account_indexes.clone(),
+            process_options.limit_load_slot_count_from_snapshot,
+            process_options.shrink_ratio,
+            process_options.verify_index,
+            process_options.accounts_db_config.clone(),
+            accounts_update_notifier.clone(),
+            exit,
+        ) {
+            Ok(bank) => {
+                let bank_forks = BankForks::new(bank);
+                return (Arc::new(RwLock::new(bank_forks)), None);
+            }
+            Err(err) => {
+                error!("Failed to load bank from snapshot dir: {:?}", err);
+                info!("Falling back to loading from snapshot archives");
+            }
+        }
     }
 
     let (deserialized_bank, full_snapshot_archive_info, incremental_snapshot_archive_info) =
