@@ -1700,11 +1700,12 @@ pub fn bank_from_snapshot_dir(
 }
 
 /// follow the prototype of fn bank_from_latest_snapshot_archives, implement the from_dir case
+#[allow(clippy::too_many_arguments)]
 pub fn bank_from_latest_snapshot_dir(
     bank_snapshots_dir: &Path,
     genesis_config: &GenesisConfig,
     runtime_config: &RuntimeConfig,
-    account_paths: &Vec<PathBuf>,
+    account_paths: &[PathBuf],
     debug_keys: Option<Arc<HashSet<Pubkey>>>,
     additional_builtins: Option<&Builtins>,
     account_secondary_indexes: AccountSecondaryIndexes,
@@ -1720,7 +1721,7 @@ pub fn bank_from_latest_snapshot_dir(
         .ok_or_else(|| SnapshotError::NoSnapshotSlotDir(bank_snapshots_dir.to_path_buf()))?;
 
     let (bank, timings) = bank_from_snapshot_dir(
-        &account_paths,
+        account_paths,
         &bank_snapshot,
         genesis_config,
         runtime_config,
