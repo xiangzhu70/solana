@@ -1327,7 +1327,7 @@ pub struct BankFromArchiveTimings {
 }
 
 pub struct BankFromDirTimings {
-    pub rebuild_bank_from_snapshots_us: u64,
+    pub rebuild_bank_from_snapshot_us: u64,
     pub build_storage_us: u64,
 }
 
@@ -1696,7 +1696,7 @@ pub fn bank_from_snapshot_dir(
     bank.set_initial_accounts_hash_verification_completed();
 
     let timings = BankFromDirTimings {
-        rebuild_bank_from_snapshots_us: measure_rebuild.as_us(),
+        rebuild_bank_from_snapshot_us: measure_rebuild.as_us(),
         build_storage_us: measure_build_storage.as_us(),
     };
     Ok((bank, timings))
@@ -1741,10 +1741,14 @@ pub fn bank_from_latest_snapshot_dir(
 
     datapoint_info!(
         "bank_from_snapshot_dir",
-        ("snapshot_build_storage_us", timings.build_storage_us, i64),
         (
-            "rebuild_bank_from_snapshots_us",
-            timings.rebuild_bank_from_snapshots_us,
+            "build_storage_from_snapshot_dir_us",
+            timings.build_storage_us,
+            i64
+        ),
+        (
+            "rebuild_bank_from_snapshot_us",
+            timings.rebuild_bank_from_snapshot_us,
             i64
         ),
     );
