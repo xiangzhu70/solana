@@ -1326,6 +1326,11 @@ pub struct BankFromArchiveTimings {
     pub verify_snapshot_bank_us: u64,
 }
 
+pub struct BankFromDirTimings {
+    pub rebuild_bank_from_snapshots_us: u64,
+    pub build_storage_us: u64,
+}
+
 // From testing, 4 seems to be a sweet spot for ranges of 60M-360M accounts and 16-64 cores. This may need to be tuned later.
 const PARALLEL_UNTAR_READERS_DEFAULT: usize = 4;
 
@@ -1651,7 +1656,7 @@ pub fn bank_from_snapshot_dir(
     accounts_db_config: Option<AccountsDbConfig>,
     accounts_update_notifier: Option<AccountsUpdateNotifier>,
     exit: &Arc<AtomicBool>,
-) -> Result<(Bank, BankFromArchiveTimings)> {
+) -> Result<(Bank, BankFromDirTimings)> {
     let next_append_vec_id = Arc::new(AtomicAppendVecId::new(0));
 
     let (storage, measure_build_storage) = measure!(
@@ -1690,11 +1695,9 @@ pub fn bank_from_snapshot_dir(
     // will calculate and check the accounts hash, so we will still have safety/correctness there.
     bank.set_initial_accounts_hash_verification_completed();
 
-    let timings = BankFromArchiveTimings {
+    let timings = BankFromDirTimings {
         rebuild_bank_from_snapshots_us: measure_rebuild.as_us(),
-        full_snapshot_untar_us: measure_build_storage.as_us(),
-        incremental_snapshot_untar_us: 0,
-        verify_snapshot_bank_us: 0,
+        build_storage_us: measure_build_storage.as_us(),
     };
     Ok((bank, timings))
 }
@@ -1737,25 +1740,11 @@ pub fn bank_from_latest_snapshot_dir(
     )?;
 
     datapoint_info!(
-        "bank_from_snapshot_archives",
-        (
-            "full_snapshot_untar_us",
-            timings.full_snapshot_untar_us,
-            i64
-        ),
-        (
-            "incremental_snapshot_untar_us",
-            timings.incremental_snapshot_untar_us,
-            i64
-        ),
+        "bank_from_snapshot_dir",
+        ("snapshot_build_storage_us", timings.build_storage_us, i64),
         (
             "rebuild_bank_from_snapshots_us",
             timings.rebuild_bank_from_snapshots_us,
-            i64
-        ),
-        (
-            "verify_snapshot_bank_us",
-            timings.verify_snapshot_bank_us,
             i64
         ),
     );
