@@ -268,8 +268,8 @@ impl SnapshotRequestHandler {
         snapshot_request: SnapshotRequest,
         accounts_package_type: AccountsPackageType,
     ) -> Result<(u64, Vec<Arc<AccountStorageEntry>>), SnapshotError> {
-        debug!(
-            "handling snapshot request: {:?}, {:?}",
+        info!(
+            "xxx handling snapshot request: {:?}, {:?}",
             snapshot_request, accounts_package_type
         );
         let mut total_time = Measure::start("snapshot_request_receiver_total_time");
@@ -317,6 +317,11 @@ impl SnapshotRequestHandler {
         );
         flush_accounts_cache_time.stop();
 
+        info!(
+            "xxx ABS accounts hash for slot {}, before hash",
+            snapshot_root_bank.slot()
+        );
+
         let accounts_hash_for_testing = previous_accounts_hash.map(|previous_accounts_hash| {
             let check_hash = false;
 
@@ -336,6 +341,11 @@ impl SnapshotRequestHandler {
                     },
                 )
                 .unwrap();
+            info!(
+                "xxx ABS inside map closure.  accounts hash for slot {}: {:?}",
+                snapshot_root_bank.slot(),
+                this_accounts_hash
+            );
             assert_eq!(previous_accounts_hash, this_accounts_hash);
             assert_eq!(capitalization, snapshot_root_bank.capitalization());
             this_accounts_hash
@@ -362,6 +372,10 @@ impl SnapshotRequestHandler {
                     status_cache_slot_deltas,
                 )
                 .expect("snapshot bank");
+                info!(
+                    "xxx ABS after add_bank_snapshot.  bank snapshot info: {:?}",
+                    bank_snapshot_info
+                );
                 AccountsPackage::new_for_snapshot(
                     accounts_package_type,
                     &snapshot_root_bank,

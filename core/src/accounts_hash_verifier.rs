@@ -216,6 +216,10 @@ impl AccountsHashVerifier {
 
     /// returns calculated accounts hash
     fn calculate_and_verify_accounts_hash(accounts_package: &AccountsPackage) -> AccountsHashEnum {
+        info!(
+            "xxx AHV: calculating accounts hash for slot: {}",
+            accounts_package.slot
+        );
         let accounts_hash_calculation_flavor = match accounts_package.package_type {
             AccountsPackageType::AccountsHashVerifier => CalcAccountsHashFlavor::Full,
             AccountsPackageType::EpochAccountsHash => CalcAccountsHashFlavor::Full,
@@ -268,6 +272,10 @@ impl AccountsHashVerifier {
         };
 
         if let Some(snapshot_info) = &accounts_package.snapshot_info {
+            info!(
+                "xxx AHV: reserializing bank for slot: {}",
+                accounts_package.slot
+            );
             solana_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
                 snapshot_info.snapshot_links.path(),
                 accounts_package.slot,
