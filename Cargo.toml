@@ -26,6 +26,7 @@ members = [
     "faucet",
     "frozen-abi",
     "frozen-abi/macro",
+    "fs-wrap-error",
     "genesis",
     "genesis-utils",
     "geyser-plugin-interface",
@@ -189,6 +190,7 @@ fd-lock = "3.0.6"
 flate2 = "1.0.25"
 fnv = "1.0.7"
 fs_extra = "1.3.0"
+fs-wrap-error = { path = "fs-wrap-error", version = "0.1.0" }
 futures = "0.3.24"
 futures-util = "0.3.26"
 gag = "1.0.0"

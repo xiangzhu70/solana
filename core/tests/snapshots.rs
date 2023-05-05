@@ -318,6 +318,8 @@ fn goto_end_of_slot(bank: &mut Bank) {
     }
 }
 
+mod fs_explicit_error;
+
 #[test_case(V1_2_0, Development)]
 #[test_case(V1_2_0, Devnet)]
 #[test_case(V1_2_0, Testnet)]
@@ -327,6 +329,8 @@ fn test_concurrent_snapshot_packaging(
     cluster_type: ClusterType,
 ) {
     solana_logger::setup();
+
+    fs_explicit_error::fs_try();
 
     // Set up snapshotting config
     let mut snapshot_test_config =

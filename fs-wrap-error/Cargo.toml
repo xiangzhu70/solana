@@ -1,0 +1,13 @@
+[package]
+name = "fs-wrap-error"
+description = "Wrap FS errors with more debugging information"
+version = "0.1.0"
+edition = { workspace = true }
+
+[dependencies]
+log = { workspace = true }
+thiserror = { workspace = true }
+
+[lib]
+name = "fs_wrap_error"
+path = "src/fs_wrap_error.rs"
